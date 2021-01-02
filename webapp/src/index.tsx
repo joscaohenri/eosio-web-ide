@@ -43,6 +43,36 @@ class PostForm extends React.Component<{}, PostFormState> {
         this.setState({ data: { ...this.state.data, ...data } });
     }
 
+    async like(){
+        try {
+            this.api.signatureProvider = new JsSignatureProvider([this.state.privateKey]);
+            const result = await this.api.transact(
+                {
+                    actions: [{
+                        account: 'talk',
+                        name: 'like',
+                        authorization: [{
+                            actor: this.state.data.user,
+                            permission: 'active',
+                        }],
+                        data: {
+                            id: this.state.data.reply_to,
+                            user: this.state.data.user,
+                        },
+                    }]
+                }, {
+                    blocksBehind: 3,
+                    expireSeconds: 30,
+                });
+            console.log(result);
+            this.setState({ error: '' });
+        } catch (e) {
+            if (e.json)
+                this.setState({ error: JSON.stringify(e.json, null, 4) });
+            else
+                this.setState({ error: '' + e });
+        }
+    }
     async post() {
         try {
             this.api.signatureProvider = new JsSignatureProvider([this.state.privateKey]);
@@ -111,6 +141,7 @@ class PostForm extends React.Component<{}, PostFormState> {
             </table>
             <br />
             <button onClick={e => this.post()}>Post</button>
+            <button onClick={e => this.like()}>Like</button>
             {this.state.error && <div>
                 <br />
                 Error:
@@ -135,13 +166,14 @@ class Messages extends React.Component<{}, { content: string }> {
                     json: true, code: 'talk', scope: '', table: 'message', limit: 1000,
                 });
                 let content =
-                    'id          reply_to      user          content\n' +
+                    'id         reply_to    user      likes      content\n' +
                     '=============================================================\n';
                 for (let row of rows.rows)
                     content +=
-                        (row.id + '').padEnd(12) +
-                        (row.reply_to + '').padEnd(12) + '  ' +
-                        row.user.padEnd(14) +
+                        (row.id + '').padEnd(11) +
+                        (row.reply_to + '').padEnd(10) + '  ' +
+                        row.user.padEnd(10) +
+                        (row.likes + '').padEnd(10) +
                         row.content + '\n';
                 this.setState({ content });
             } catch (e) {
